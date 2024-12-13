@@ -9,15 +9,22 @@
 # HunyuanVideo: A Systematic Framework For Large Video Generation Model
 
 <div align="center">
-  <a href="https://github.com/Tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo Code&message=Github&color=blue&logo=github-pages"></a> &ensp;
-  <a href="https://aivideo.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Web&color=green&logo=github-pages"></a> &ensp;
-  <a href="https://video.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Playground&message=Web&color=green&logo=github-pages"></a> &ensp;
-  <a href="https://arxiv.org/abs/2412.03603"><img src="https://img.shields.io/static/v1?label=Tech Report&message=Arxiv:HunyuanVideo&color=red&logo=arxiv"></a> &ensp;
-  <a href="https://huggingface.co/tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo&message=HuggingFace&color=yellow"></a> &ensp; &ensp;
-  <a href="https://huggingface.co/tencent/HunyuanVideo-PromptRewrite"><img src="https://img.shields.io/static/v1?label=HunyuanVideo-PromptRewrite&message=HuggingFace&color=yellow"></a> &ensp; &ensp;
+  <a href="https://github.com/Tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo Code&message=Github&color=blue"></a> &ensp;
+  <a href="https://aivideo.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Web&color=green"></a> &ensp;
+  <a href="https://video.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Playground&message=Web&color=green"></a>
+</div>
+<div align="center">
+  <a href="https://arxiv.org/abs/2412.03603"><img src="https://img.shields.io/static/v1?label=Tech Report&message=Arxiv&color=red"></a> &ensp;
+  <a href="https://aivideo.hunyuan.tencent.com/hunyuanvideo.pdf"><img src="https://img.shields.io/static/v1?label=Tech Report&message=High Quality Version (~350M)&color=red"></a>
+</div>
+<div align="center">
+  <a href="https://huggingface.co/tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo&message=HuggingFace&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/tencent/HunyuanVideo-PromptRewrite"><img src="https://img.shields.io/static/v1?label=HunyuanVideo-PromptRewrite&message=HuggingFace&color=yellow"></a>
 
  [![Replicate](https://replicate.com/zsxkib/hunyuan-video/badge)](https://replicate.com/zsxkib/hunyuan-video)
 </div>
+
+
 <p align="center">
     👋 加入我们的 <a href="assets/WECHAT.md" target="_blank">WeChat</a> 和 <a href="https://discord.gg/GpARqvrh" target="_blank">Discord</a> 
 </p>
@@ -74,12 +81,11 @@
   - [🛠️ 安装和依赖](#️-安装和依赖)
     - [Linux 安装指引](#linux-安装指引)
   - [🧱 下载预训练模型](#-下载预训练模型)
-  - [🔑 推理](#-推理)
+  - [🔑 单卡推理](#-单卡推理)
     - [使用命令行](#使用命令行)
     - [运行gradio服务](#运行gradio服务)
     - [更多配置](#更多配置)
   - [🚀 使用 xDiT 实现多卡并行推理](#-使用-xdit-实现多卡并行推理)
-    - [安装与 xDiT 兼容的依赖项](#安装与-xdit-兼容的依赖项)
     - [使用命令行](#使用命令行-1)
   - [🔗 BibTeX](#-bibtex)
   - [🧩 使用 HunyuanVideo 的项目](#-使用-hunyuanvideo-的项目)
@@ -187,41 +193,67 @@ cd HunyuanVideo
 
 ### Linux 安装指引
 
-我们提供了 `environment.yml` 文件来设置 Conda 环境。Conda 的安装指南可以参考[这里](https://docs.anaconda.com/free/miniconda/index.html)。
+我们推荐使用 CUDA 12.4 或 11.8 的版本。
 
-我们推理使用 CUDA 11.8 或 12.0+ 的版本。
+Conda 的安装指南可以参考[这里](https://docs.anaconda.com/free/miniconda/index.html)。
 
 ```shell
-# 1. Prepare conda environment
-conda env create -f environment.yml
+# 1. Create conda environment
+conda create -n HunyuanVideo python==3.10.9
 
 # 2. Activate the environment
 conda activate HunyuanVideo
 
-# 3. Install pip dependencies
+# 3. Install PyTorch and other dependencies using conda
+# For CUDA 11.8
+conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=11.8 -c pytorch -c nvidia
+# For CUDA 12.4
+conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=12.4 -c pytorch -c nvidia
+
+# 4. Install pip dependencies
 python -m pip install -r requirements.txt
 
-# 4. Install flash attention v2 for acceleration (requires CUDA 11.8 or above)
+# 5. Install flash attention v2 for acceleration (requires CUDA 11.8 or above)
 python -m pip install ninja
-python -m pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.5.9.post1
+python -m pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.6.3
+
+# 6. Install xDiT for parallel inference (It is recommended to use torch 2.4.0 and flash-attn 2.6.3)
+python -m pip install xfuser==0.4.0
+```
+
+如果在特定 GPU 型号上遭遇 float point exception(core dump) 问题，可尝试以下方案修复：
+
+```shell
+#选项1：确保已正确安装 CUDA 12.4, CUBLAS>=12.4.5.8, 和 CUDNN>=9.00 (或直接使用我们提供的CUDA12镜像)
+pip install nvidia-cublas-cu12==12.4.5.8
+export LD_LIBRARY_PATH=/opt/conda/lib/python3.8/site-packages/nvidia/cublas/lib/
+
+#选项2：强制显式使用 CUDA11.8 编译的 Pytorch 版本以及其他所有软件包
+pip uninstall -r requirements.txt  # 确保卸载所有依赖包
+pip uninstall -y xfuser
+pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu118
+pip install -r requirements.txt
+pip install ninja
+pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.6.3
+pip install xfuser==0.4.0
 ```
 
 另外，我们提供了一个预构建的 Docker 镜像，可以使用如下命令进行拉取和运行。
 ```shell
-# 用于 CUDA 11
-docker pull hunyuanvideo/hunyuanvideo:cuda_11
-docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_11
-
-# 用于 CUDA 12
+# 用于 CUDA 12.4 (已更新避免 float point exception)
 docker pull hunyuanvideo/hunyuanvideo:cuda_12
 docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_12
+
+# 用于 CUDA 11.8
+docker pull hunyuanvideo/hunyuanvideo:cuda_11
+docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_11
 ```
 
 ## 🧱 下载预训练模型
 
 下载预训练模型参考[这里](ckpts/README.md)。
 
-## 🔑 推理
+## 🔑 单卡推理
 我们在下表中列出了支持的高度/宽度/帧数设置。
 
 |      分辨率       |           h/w=9:16           |    h/w=16:9     |     h/w=4:3     |     h/w=3:4     |     h/w=1:1     |
@@ -275,26 +307,6 @@ python3 gradio_server.py --flow-reverse
 
 [xDiT](https://github.com/xdit-project/xDiT) 是一个针对多 GPU 集群的扩展推理引擎，用于扩展 Transformers（DiTs）。
 它成功为各种 DiT 模型（包括 mochi-1、CogVideoX、Flux.1、SD3 等）提供了低延迟的并行推理解决方案。该存储库采用了 [Unified Sequence Parallelism (USP)](https://arxiv.org/abs/2405.07719) API 用于混元视频模型的并行推理。
-
-### 安装与 xDiT 兼容的依赖项
-
-```
-# 1. 创建一个空白的 conda 环境
-conda create -n hunyuanxdit python==3.10.9
-conda activate hunyuanxdit
-
-# 2. 使用 CUDA 11.8 安装 PyTorch 组件
-conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0  pytorch-cuda=11.8 -c pytorch -c nvidia
-
-# 3. 安装 pip 依赖项
-python -m pip install -r requirements_xdit.txt
-```
-
-您可以跳过上述步骤，直接拉取预构建的 Docker 镜像，这个镜像是从 [docker/Dockerfile_xDiT](./docker/Dockerfile_xDiT) 构建的
-
-```
-docker pull thufeifeibear/hunyuanvideo:latest
-```
 
 ### 使用命令行
 

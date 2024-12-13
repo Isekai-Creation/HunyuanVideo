@@ -9,15 +9,21 @@
 # HunyuanVideo: A Systematic Framework For Large Video Generation Model
 
 <div align="center">
-  <a href="https://github.com/Tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo Code&message=Github&color=blue&logo=github-pages"></a> &ensp;
-  <a href="https://aivideo.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Web&color=green&logo=github-pages"></a> &ensp;
-  <a href="https://video.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Playground&message=Web&color=green&logo=github-pages"></a> &ensp;
-  <a href="https://arxiv.org/abs/2412.03603"><img src="https://img.shields.io/static/v1?label=Tech Report&message=Arxiv:HunyuanVideo&color=red&logo=arxiv"></a> &ensp;
-  <a href="https://huggingface.co/tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo&message=HuggingFace&color=yellow"></a> &ensp; &ensp;
-  <a href="https://huggingface.co/tencent/HunyuanVideo-PromptRewrite"><img src="https://img.shields.io/static/v1?label=HunyuanVideo-PromptRewrite&message=HuggingFace&color=yellow"></a> &ensp; &ensp;
-
-  [![Replicate](https://replicate.com/zsxkib/hunyuan-video/badge)](https://replicate.com/zsxkib/hunyuan-video)
+  <a href="https://github.com/Tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo Code&message=Github&color=blue"></a> &ensp;
+  <a href="https://aivideo.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Web&color=green"></a> &ensp;
+  <a href="https://video.hunyuan.tencent.com"><img src="https://img.shields.io/static/v1?label=Playground&message=Web&color=green"></a>
 </div>
+<div align="center">
+  <a href="https://arxiv.org/abs/2412.03603"><img src="https://img.shields.io/static/v1?label=Tech Report&message=Arxiv&color=red"></a> &ensp;
+  <a href="https://aivideo.hunyuan.tencent.com/hunyuanvideo.pdf"><img src="https://img.shields.io/static/v1?label=Tech Report&message=High Quality Version (~350M)&color=red"></a>
+</div>
+<div align="center">
+  <a href="https://huggingface.co/tencent/HunyuanVideo"><img src="https://img.shields.io/static/v1?label=HunyuanVideo&message=HuggingFace&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/tencent/HunyuanVideo-PromptRewrite"><img src="https://img.shields.io/static/v1?label=HunyuanVideo-PromptRewrite&message=HuggingFace&color=yellow"></a>
+
+ [![Replicate](https://replicate.com/zsxkib/hunyuan-video/badge)](https://replicate.com/zsxkib/hunyuan-video)
+</div>
+
 <p align="center">
     👋 Join our <a href="assets/WECHAT.md" target="_blank">WeChat</a> and <a href="https://discord.gg/GpARqvrh" target="_blank">Discord</a> 
 </p>
@@ -35,7 +41,7 @@ This repo contains PyTorch model definitions, pre-trained weights and inference/
   <video src="https://github.com/user-attachments/assets/f37925a3-7d42-40c9-8a9b-5a010c7198e2" width="50%">
 </div>
 
-The video is heavily compressed due to compliance of GitHub policy. The high quality version can be downloaded from [here](https://aivideo.hunyuan.tencent.com/download/HunyuanVideo/material/demo.mov).
+The video is heavily compressed to comply with GitHub's policy. The high-quality version can be downloaded from [here](https://aivideo.hunyuan.tencent.com/download/HunyuanVideo/material/demo.mov).
 
 ## 🔥🔥🔥 News!!
 * Dec 7, 2024: 🚀 We release the parallel inference code for HunyuanVideo powered by [xDiT](https://github.com/xdit-project/xDiT).
@@ -47,11 +53,11 @@ The video is heavily compressed due to compliance of GitHub policy. The high qua
   - [x] Inference 
   - [x] Checkpoints
   - [x] Multi-gpus Sequence Parallel inference (Faster inference speed on more gpus)
-  - [x] Web Demo (Gradio) 
+  - [x] Web Demo (Gradio)
+  - [ ] Diffusers 
   - [ ] Penguin Video Benchmark
   - [ ] ComfyUI
-  - [ ] Diffusers 
-  - [ ] Multi-gpus PipeFusion inference (Low memory requirmenets)
+  - [ ] Multi-gpus PipeFusion inference (Low memory requirements)
 - HunyuanVideo (Image-to-Video Model)
   - [ ] Inference 
   - [ ] Checkpoints 
@@ -79,7 +85,6 @@ The video is heavily compressed due to compliance of GitHub policy. The high qua
     - [Run a Gradio Server](#run-a-gradio-server)
     - [More Configurations](#more-configurations)
   - [🚀 Parallel Inference on Multiple GPUs by xDiT](#-parallel-inference-on-multiple-gpus-by-xdit)
-    - [Install Dependencies Compatible with xDiT](#install-dependencies-compatible-with-xdit)
     - [Using Command Line](#using-command-line-1)
   - [🔗 BibTeX](#-bibtex)
   - [🧩 Projects that use HunyuanVideo](#-projects-that-use-hunyuanvideo)
@@ -97,7 +102,7 @@ We conducted extensive experiments and implemented a series of targeted designs 
 HunyuanVideo is trained on a spatial-temporally
 compressed latent space, which is compressed through a Causal 3D VAE. Text prompts are encoded
 using a large language model, and used as the conditions. Taking Gaussian noise and the conditions as
-input, our generative model produces an output latent, which is then decoded to images or videos through
+input, our generative model produces a output latent, which is then decoded to images or videos through
 the 3D VAE decoder.
 <p align="center">
   <img src="https://raw.githubusercontent.com/Tencent/HunyuanVideo/refs/heads/main/assets/overall.png"  height=300>
@@ -116,15 +121,15 @@ overall model performance.
 </p>
 
 ### **MLLM Text Encoder**
-Some previous text-to-video models typically use pretrained CLIP and T5-XXL as text encoders where CLIP uses Transformer Encoder and T5 uses an Encoder-Decoder structure. In contrast, we utilize a pretrained Multimodal Large Language Model (MLLM) with a Decoder-Only structure as our text encoder, which has the following advantages: (i) Compared with T5, MLLM after visual instruction finetuning has better image-text alignment in the feature space, which alleviates the difficulty of instruction following in diffusion models; (ii)
-Compared with CLIP, MLLM has been demonstrated superior ability in image detail description
+Some previous text-to-video models typically use pre-trained CLIP and T5-XXL as text encoders where CLIP uses Transformer Encoder and T5 uses an Encoder-Decoder structure. In contrast, we utilize a pre-trained Multimodal Large Language Model (MLLM) with a Decoder-Only structure as our text encoder, which has the following advantages: (i) Compared with T5, MLLM after visual instruction finetuning has better image-text alignment in the feature space, which alleviates the difficulty of the instruction following in diffusion models; (ii)
+Compared with CLIP, MLLM has demonstrated superior ability in image detail description
 and complex reasoning; (iii) MLLM can play as a zero-shot learner by following system instructions prepended to user prompts, helping text features pay more attention to key information. In addition, MLLM is based on causal attention while T5-XXL utilizes bidirectional attention that produces better text guidance for diffusion models. Therefore, we introduce an extra bidirectional token refiner to enhance text features.
 <p align="center">
   <img src="https://raw.githubusercontent.com/Tencent/HunyuanVideo/refs/heads/main/assets/text_encoder.png"  height=275>
 </p>
 
 ### **3D VAE**
-HunyuanVideo trains a 3D VAE with CausalConv3D to compress pixel-space videos and images into a compact latent space. We set the compression ratios of video length, space and channel to 4, 8 and 16 respectively. This can significantly reduce the number of tokens for the subsequent diffusion transformer model, allowing us to train videos at the original resolution and frame rate.
+HunyuanVideo trains a 3D VAE with CausalConv3D to compress pixel-space videos and images into a compact latent space. We set the compression ratios of video length, space, and channel to 4, 8, and 16 respectively. This can significantly reduce the number of tokens for the subsequent diffusion transformer model, allowing us to train videos at the original resolution and frame rate.
 <p align="center">
   <img src="https://raw.githubusercontent.com/Tencent/HunyuanVideo/refs/heads/main/assets/3dvae.png"  height=150>
 </p>
@@ -161,10 +166,10 @@ To evaluate the performance of HunyuanVideo, we selected five strong baselines f
     <td>GEN-3 alpha (Web)</td> <td>&#10008</td> <td>6s</td> <td>47.7%</td> <td>54.7%</td> <td>97.5%</td> <td>27.4%</td> <td>4</td> 
 </tr> 
 <tr> 
-    <td>Luma1.6 (API)</td><td>&#10008</td> <td>5s</td> <td>57.6%</td> <td>44.2%</td> <td>94.1%</td> <td>24.8%</td> <td>6</td>
+    <td>Luma1.6 (API)</td><td>&#10008</td> <td>5s</td> <td>57.6%</td> <td>44.2%</td> <td>94.1%</td> <td>24.8%</td> <td>5</td>
 </tr>
 <tr> 
-    <td>CNTopC (Web)</td> <td>&#10008</td> <td>5s</td> <td>48.4%</td> <td>47.2%</td> <td>96.3%</td> <td>24.6%</td> <td>5</td>
+    <td>CNTopC (Web)</td> <td>&#10008</td> <td>5s</td> <td>48.4%</td> <td>47.2%</td> <td>96.3%</td> <td>24.6%</td> <td>6</td>
 </tr> 
 </tbody>
 </table>
@@ -195,36 +200,61 @@ cd HunyuanVideo
 
 ### Installation Guide for Linux
 
-We provide an `environment.yml` file for setting up a Conda environment.
+We recommend CUDA versions 12.4 or 11.8 for the manual installation.
+
 Conda's installation instructions are available [here](https://docs.anaconda.com/free/miniconda/index.html).
 
-We recommend CUDA versions 11.8 and 12.0+.
-
 ```shell
-# 1. Prepare conda environment
-conda env create -f environment.yml
+# 1. Create conda environment
+conda create -n HunyuanVideo python==3.10.9
 
 # 2. Activate the environment
 conda activate HunyuanVideo
 
-# 3. Install pip dependencies
+# 3. Install PyTorch and other dependencies using conda
+# For CUDA 11.8
+conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=11.8 -c pytorch -c nvidia
+# For CUDA 12.4
+conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=12.4 -c pytorch -c nvidia
+
+# 4. Install pip dependencies
 python -m pip install -r requirements.txt
 
-# 4. Install flash attention v2 for acceleration (requires CUDA 11.8 or above)
+# 5. Install flash attention v2 for acceleration (requires CUDA 11.8 or above)
 python -m pip install ninja
-python -m pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.5.9.post1
+python -m pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.6.3
+
+# 6. Install xDiT for parallel inference (It is recommended to use torch 2.4.0 and flash-attn 2.6.3)
+python -m pip install xfuser==0.4.0
+```
+
+In case of running into float point exception(core dump) on the specific GPU type, you may try the following solutions:
+
+```shell
+# Option 1: Making sure you have installed CUDA 12.4, CUBLAS>=12.4.5.8, and CUDNN>=9.00 (or simply using our CUDA 12 docker image).
+pip install nvidia-cublas-cu12==12.4.5.8
+export LD_LIBRARY_PATH=/opt/conda/lib/python3.8/site-packages/nvidia/cublas/lib/
+
+# Option 2: Forcing to explictly use the CUDA 11.8 compiled version of Pytorch and all the other packages
+pip uninstall -r requirements.txt  # uninstall all packages
+pip uninstall -y xfuser
+pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu118
+pip install -r requirements.txt
+pip install ninja
+pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.6.3
+pip install xfuser==0.4.0
 ```
 
 Additionally, HunyuanVideo also provides a pre-built Docker image. Use the following command to pull and run the docker image.
 
 ```shell
-# For CUDA 11
-docker pull hunyuanvideo/hunyuanvideo:cuda_11
-docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_11
-
-# For CUDA 12
+# For CUDA 12.4 (updated to avoid float point exception)
 docker pull hunyuanvideo/hunyuanvideo:cuda_12
 docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_12
+
+# For CUDA 11.8
+docker pull hunyuanvideo/hunyuanvideo:cuda_11
+docker run -itd --gpus all --init --net=host --uts=host --ipc=host --name hunyuanvideo --security-opt=seccomp=unconfined --ulimit=stack=67108864 --ulimit=memlock=-1 --privileged hunyuanvideo/hunyuanvideo:cuda_11
 ```
 
 
@@ -273,7 +303,7 @@ We list some more useful configurations for easy usage:
 |     `--video-size`     | 720 1280  |      The size of the generated video      |
 |    `--video-length`    |    129    |     The length of the generated video     |
 |    `--infer-steps`     |    50     |     The number of steps for sampling      |
-| `--embedded-cfg-scale` |    6.0    |    Embeded  Classifier free guidance scale       |
+| `--embedded-cfg-scale` |    6.0    |    Embedded  Classifier free guidance scale       |
 |     `--flow-shift`     |    7.0    | Shift factor for flow matching schedulers |
 |     `--flow-reverse`   |    False  | If reverse, learning/sampling from t=1 -> t=0 |
 |        `--seed`        |     None  |   The random seed for generating video, if None, we init a random seed    |
@@ -285,26 +315,6 @@ We list some more useful configurations for easy usage:
 
 [xDiT](https://github.com/xdit-project/xDiT) is a Scalable Inference Engine for Diffusion Transformers (DiTs) on multi-GPU Clusters.
 It has successfully provided low-latency parallel inference solutions for a variety of DiTs models, including mochi-1, CogVideoX, Flux.1, SD3, etc. This repo adopted the [Unified Sequence Parallelism (USP)](https://arxiv.org/abs/2405.07719) APIs for parallel inference of the HunyuanVideo model.
-
-### Install Dependencies Compatible with xDiT
-
-```
-# 1. Create a black conda environment
-conda create -n hunyuanxdit python==3.10.9
-conda activate hunyuanxdit
-
-# 3. Install PyTorch component with CUDA 11.8
-conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0  pytorch-cuda=11.8 -c pytorch -c nvidia
-
-# 3. Install pip dependencies
-python -m pip install -r requirements_xdit.txt
-```
-
-You can skip the above steps and pull the pre-built docker image directly, which is built from [docker/Dockerfile_xDiT](./docker/Dockerfile_xDiT)
-
-```
-docker pull thufeifeibear/hunyuanvideo:latest
-```
 
 ### Using Command Line
 
@@ -388,7 +398,7 @@ If you find [HunyuanVideo](https://arxiv.org/abs/2412.03603) useful for your res
 ```BibTeX
 @misc{kong2024hunyuanvideo,
       title={HunyuanVideo: A Systematic Framework For Large Video Generative Models}, 
-      author={Weijie Kong, Qi Tian, Zijian Zhang, Rox Min, Zuozhuo Dai, Jin Zhou, Jiangfeng Xiong, Xin Li, Bo Wu, Jianwei Zhang, Kathrina Wu, Qin Lin, Aladdin Wang, Andong Wang, Changlin Li, Duojun Huang, Fang Yang, Hao Tan, Hongmei Wang, Jacob Song, Jiawang Bai, Jianbing Wu, Jinbao Xue, Joey Wang, Junkun Yuan, Kai Wang, Mengyang Liu, Pengyu Li, Shuai Li, Weiyan Wang, Wenqing Yu, Xinchi Deng, Yang Li, Yanxin Long, Yi Chen, Yutao Cui, Yuanbo Peng, Zhentao Yu, Zhiyu He, Zhiyong Xu, Zixiang Zhou, Zunnan Xu, Yangyu Tao, Qinglin Lu, Songtao Liu, Dax Zhou, Hongfa Wang, Yong Yang, Di Wang, Yuhong Liu, and Jie Jiang, along with Caesar Zhong},
+      author={Weijie Kong, Qi Tian, Zijian Zhang, Rox Min, Zuozhuo Dai, Jin Zhou, Jiangfeng Xiong, Xin Li, Bo Wu, Jianwei Zhang, Kathrina Wu, Qin Lin, Aladdin Wang, Andong Wang, Changlin Li, Duojun Huang, Fang Yang, Hao Tan, Hongmei Wang, Jacob Song, Jiawang Bai, Jianbing Wu, Jinbao Xue, Joey Wang, Junkun Yuan, Kai Wang, Mengyang Liu, Pengyu Li, Shuai Li, Weiyan Wang, Wenqing Yu, Xinchi Deng, Yang Li, Yanxin Long, Yi Chen, Yutao Cui, Yuanbo Peng, Zhentao Yu, Zhiyu He, Zhiyong Xu, Zixiang Zhou, Zunnan Xu, Yangyu Tao, Qinglin Lu, Songtao Liu, Daquan Zhou, Hongfa Wang, Yong Yang, Di Wang, Yuhong Liu, and Jie Jiang, along with Caesar Zhong},
       year={2024},
       archivePrefix={arXiv preprint arXiv:2412.03603},
       primaryClass={cs.CV},
