@@ -25,7 +25,7 @@ try:
         get_sequence_parallel_rank,
         get_sp_group,
         initialize_model_parallel,
-        init_distributed_environment
+        init_distributed_environment,
     )
 except:
     xfuser = None
@@ -34,6 +34,36 @@ except:
     get_sp_group = None
     initialize_model_parallel = None
     init_distributed_environment = None
+
+try:
+    import numpy as np
+    import torch_xla as xla
+    import torch_xla.core.xla_model as xm
+    from torch_xla import runtime as xr
+    import torch_xla.distributed.spmd as xs
+    from torch_xla.experimental.spmd_fully_sharded_data_parallel import (
+        _prepare_spmd_partition_spec,
+        SpmdFullyShardedDataParallel as FSDPv2,
+    )
+
+    xr.initialize_cache("/tmp")
+
+    xr.use_spmd()
+
+    #  xla.experimental.eager_mode(True)
+
+    num_devices = xr.global_runtime_device_count()
+    mesh_shape = (num_devices // 1, 1)
+    device_ids = np.array(range(num_devices))
+    # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
+    mesh = xs.Mesh(device_ids, mesh_shape, ("fsdp", "model"))
+    xs.set_global_mesh(mesh)
+
+    print("_________________________XLA is Available!")
+    XLA_AVAILABLE = True
+except:
+    print("_________________________XLA is not installed.")
+    XLA_AVAILABLE = False
 
 
 def parallelize_transformer(pipe):
@@ -60,24 +90,32 @@ def parallelize_transformer(pipe):
             # try to split x by width
             split_dim = -1
         else:
-            raise ValueError(f"Cannot split video sequence into ulysses_degree x ring_degree ({get_sequence_parallel_world_size()}) parts evenly")
+            raise ValueError(
+                f"Cannot split video sequence into ulysses_degree x ring_degree ({get_sequence_parallel_world_size()}) parts evenly"
+            )
 
         # patch sizes for the temporal, height, and width dimensions are 1, 2, and 2.
         temporal_size, h, w = x.shape[2], x.shape[3] // 2, x.shape[4] // 2
 
-        x = torch.chunk(x, get_sequence_parallel_world_size(),dim=split_dim)[get_sequence_parallel_rank()]
+        x = torch.chunk(x, get_sequence_parallel_world_size(), dim=split_dim)[
+            get_sequence_parallel_rank()
+        ]
 
         dim_thw = freqs_cos.shape[-1]
         freqs_cos = freqs_cos.reshape(temporal_size, h, w, dim_thw)
-        freqs_cos = torch.chunk(freqs_cos, get_sequence_parallel_world_size(),dim=split_dim - 1)[get_sequence_parallel_rank()]
+        freqs_cos = torch.chunk(
+            freqs_cos, get_sequence_parallel_world_size(), dim=split_dim - 1
+        )[get_sequence_parallel_rank()]
         freqs_cos = freqs_cos.reshape(-1, dim_thw)
         dim_thw = freqs_sin.shape[-1]
         freqs_sin = freqs_sin.reshape(temporal_size, h, w, dim_thw)
-        freqs_sin = torch.chunk(freqs_sin, get_sequence_parallel_world_size(),dim=split_dim - 1)[get_sequence_parallel_rank()]
+        freqs_sin = torch.chunk(
+            freqs_sin, get_sequence_parallel_world_size(), dim=split_dim - 1
+        )[get_sequence_parallel_rank()]
         freqs_sin = freqs_sin.reshape(-1, dim_thw)
-        
+
         from xfuser.core.long_ctx_attention import xFuserLongContextAttention
-        
+
         for block in transformer.double_blocks + transformer.single_blocks:
             block.hybrid_seq_parallel_attn = xFuserLongContextAttention()
 
@@ -101,7 +139,7 @@ def parallelize_transformer(pipe):
 
     new_forward = new_forward.__get__(transformer)
     transformer.forward = new_forward
-    
+
 
 class Inference(object):
     def __init__(
@@ -129,18 +167,14 @@ class Inference(object):
         self.use_cpu_offload = use_cpu_offload
 
         self.args = args
-        self.device = (
-            device
-            if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
-        )
+        self.device = device if device is not None else xla.device()
         self.logger = logger
         self.parallel_args = parallel_args
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_path, args, device=None, **kwargs):
+    def from_pretrained(
+        cls, pretrained_model_path, args, device=xla.device(), **kwargs
+    ):
         """
         Initialize the Inference pipeline.
 
@@ -151,22 +185,27 @@ class Inference(object):
         """
         # ========================================================================
         logger.info(f"Got text-to-video model root path: {pretrained_model_path}")
-        
+
         # ==================== Initialize Distributed Environment ================
         if args.ulysses_degree > 1 or args.ring_degree > 1:
-            assert xfuser is not None, \
-                "Ulysses Attention and Ring Attention requires xfuser package."
+            assert (
+                xfuser is not None
+            ), "Ulysses Attention and Ring Attention requires xfuser package."
 
-            assert args.use_cpu_offload is False, \
-                "Cannot enable use_cpu_offload in the distributed environment."
+            assert (
+                args.use_cpu_offload is False
+            ), "Cannot enable use_cpu_offload in the distributed environment."
 
             dist.init_process_group("nccl")
 
-            assert dist.get_world_size() == args.ring_degree * args.ulysses_degree, \
-                "number of GPUs should be equal to ring_degree * ulysses_degree."
+            assert (
+                dist.get_world_size() == args.ring_degree * args.ulysses_degree
+            ), "number of GPUs should be equal to ring_degree * ulysses_degree."
 
-            init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
-            
+            init_distributed_environment(
+                rank=dist.get_rank(), world_size=dist.get_world_size()
+            )
+
             initialize_model_parallel(
                 sequence_parallel_degree=dist.get_world_size(),
                 ring_degree=args.ring_degree,
@@ -175,9 +214,12 @@ class Inference(object):
             device = torch.device(f"cuda:{os.environ['LOCAL_RANK']}")
         else:
             if device is None:
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                device = xla.device()
 
-        parallel_args = {"ulysses_degree": args.ulysses_degree, "ring_degree": args.ring_degree}
+        parallel_args = {
+            "ulysses_degree": args.ulysses_degree,
+            "ring_degree": args.ring_degree,
+        }
 
         # ======================== Get the args path =============================
 
@@ -270,7 +312,7 @@ class Inference(object):
             use_cpu_offload=args.use_cpu_offload,
             device=device,
             logger=logger,
-            parallel_args=parallel_args
+            parallel_args=parallel_args,
         )
 
     @staticmethod
@@ -374,9 +416,9 @@ class HunyuanVideoSampler(Inference):
         text_encoder_2=None,
         pipeline=None,
         use_cpu_offload=False,
-        device=0,
+        device=xla.device(),
         logger=None,
-        parallel_args=None
+        parallel_args=None,
     ):
         super().__init__(
             args,
@@ -389,7 +431,7 @@ class HunyuanVideoSampler(Inference):
             use_cpu_offload=use_cpu_offload,
             device=device,
             logger=logger,
-            parallel_args=parallel_args
+            parallel_args=parallel_args,
         )
 
         self.pipeline = self.load_diffusion_pipeline(
@@ -426,6 +468,15 @@ class HunyuanVideoSampler(Inference):
             else:
                 raise ValueError(f"Invalid denoise type {args.denoise_type}")
 
+        def shard_output(output, mesh):
+            xs.mark_sharding(
+                output["x"],
+                xs.get_global_mesh(),
+                _prepare_spmd_partition_spec(output["x"], shard_maximal=True),
+            )
+
+        model = FSDPv2(model, shard_output=shard_output)
+        vae = FSDPv2(vae)
         pipeline = HunyuanVideoPipeline(
             vae=vae,
             text_encoder=text_encoder,
@@ -435,10 +486,8 @@ class HunyuanVideoSampler(Inference):
             progress_bar_config=progress_bar_config,
             args=args,
         )
-        if self.use_cpu_offload:
-            pipeline.enable_sequential_cpu_offload()
-        else:
-            pipeline = pipeline.to(device)
+        print(f"Pipeline: {pipeline}")
+        pipeline = pipeline.to(device)
 
         return pipeline
 
@@ -521,9 +570,13 @@ class HunyuanVideoSampler(Inference):
                 num_images_per_prompt (int): The number of images per prompt. Default is 1.
                 infer_steps (int): The number of inference steps. Default is 100.
         """
-        if self.parallel_args['ulysses_degree'] > 1 or self.parallel_args['ring_degree'] > 1:
-            assert seed is not None, \
-                "You have to set a seed in the distributed environment, please rerun with --seed <your-seed>."
+        if (
+            self.parallel_args["ulysses_degree"] > 1
+            or self.parallel_args["ring_degree"] > 1
+        ):
+            assert (
+                seed is not None
+            ), "You have to set a seed in the distributed environment, please rerun with --seed <your-seed>."
 
             parallelize_transformer(self.pipeline)
 
@@ -563,7 +616,9 @@ class HunyuanVideoSampler(Inference):
             raise ValueError(
                 f"Seed must be an integer, a list of integers, or None, got {seed}."
             )
-        generator = [torch.Generator(self.device).manual_seed(seed) for seed in seeds]
+        generator = [
+            torch.Generator(torch.device("cpu")).manual_seed(seed) for seed in seeds
+        ]
         out_dict["seeds"] = seeds
 
         # ========================================================================
@@ -610,7 +665,7 @@ class HunyuanVideoSampler(Inference):
         scheduler = FlowMatchDiscreteScheduler(
             shift=flow_shift,
             reverse=self.args.flow_reverse,
-            solver=self.args.flow_solver
+            solver=self.args.flow_solver,
         )
         self.pipeline.scheduler = scheduler
 

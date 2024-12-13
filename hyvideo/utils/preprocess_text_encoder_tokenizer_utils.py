@@ -5,6 +5,8 @@ from transformers import (
     LlavaForConditionalGeneration,
 )
 
+import torch
+
 
 def preprocess_text_encoder_tokenizer(args):
 
@@ -13,14 +15,11 @@ def preprocess_text_encoder_tokenizer(args):
         args.input_dir,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
-    ).to(0)
+    ).to(torch.device("cpu"))
 
-    model.language_model.save_pretrained(
-        f"{args.output_dir}"
-    )
-    processor.tokenizer.save_pretrained(
-        f"{args.output_dir}"
-    )
+    model.language_model.save_pretrained(f"{args.output_dir}")
+    processor.tokenizer.save_pretrained(f"{args.output_dir}")
+
 
 if __name__ == "__main__":
 

@@ -48,7 +48,39 @@ from ...vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
 from ...text_encoder import TextEncoder
 from ...modules import HYVideoDiffusionTransformer
 
+try:
+    import time
+    import numpy as np
+    import torch_xla as xla
+    import torch_xla.core.xla_model as xm
+    from torch_xla import runtime as xr
+    import torch_xla.distributed.spmd as xs
+    from torch_xla.experimental.spmd_fully_sharded_data_parallel import (
+        _prepare_spmd_partition_spec,
+        SpmdFullyShardedDataParallel as FSDPv2,
+    )
+
+    xr.initialize_cache("/tmp")
+
+    xr.use_spmd()
+
+    # xla.experimental.eager_mode(True)
+
+    num_devices = xr.global_runtime_device_count()
+    mesh_shape = (num_devices // 1, 1)
+    device_ids = np.array(range(num_devices))
+    # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
+    mesh = xs.Mesh(device_ids, mesh_shape, ("fsdp", "model"))
+    xs.set_global_mesh(mesh)
+
+    print("_________________________XLA is Available!")
+    XLA_AVAILABLE = True
+except:
+    print("_________________________XLA is not installed.")
+    XLA_AVAILABLE = False
+
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+
 
 EXAMPLE_DOC_STRING = """"""
 
@@ -312,6 +344,10 @@ class HunyuanVideoPipeline(DiffusionPipeline):
 
             text_inputs = text_encoder.text2tokens(prompt, data_type=data_type)
 
+            # print device
+            print(f"Device: {device}")
+            print(f"text_encoder.device: {text_encoder.device}")
+
             if clip_skip is None:
                 prompt_outputs = text_encoder.encode(
                     text_inputs, data_type=data_type, device=device
@@ -554,7 +590,6 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                     f" {negative_prompt_embeds.shape}."
                 )
 
-
     def prepare_latents(
         self,
         batch_size,
@@ -748,7 +783,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             negative_prompt_embeds (`torch.Tensor`, *optional*):
                 Pre-generated negative text embeddings. Can be used to easily tweak text inputs (prompt weighting). If
                 not provided, `negative_prompt_embeds` are generated from the `negative_prompt` input argument.
-                
+
             output_type (`str`, *optional*, defaults to `"pil"`):
                 The output format of the generated image. Choose between `PIL.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
@@ -835,7 +870,15 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         else:
             batch_size = prompt_embeds.shape[0]
 
-        device = torch.device(f"cuda:{dist.get_rank()}") if dist.is_initialized() else self._execution_device
+        device = xla.device()
+        self.text_encoder = self.text_encoder.to(device)
+        self.text_encoder_2 = (
+            self.text_encoder_2.to(device) if self.text_encoder_2 is not None else None
+        )
+
+        print(f"Device: {device}")
+        self.text_encoder = self.text_encoder.to(torch.device("cpu"))
+        self.text_encoder_2 = self.text_encoder_2.to(torch.device("cpu"))
 
         # 3. Encode input prompt
         lora_scale = (
@@ -851,7 +894,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             negative_prompt_mask,
         ) = self.encode_prompt(
             prompt,
-            device,
+            torch.device("cpu"),
             num_videos_per_prompt,
             self.do_classifier_free_guidance,
             negative_prompt,
@@ -871,7 +914,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                 negative_prompt_mask_2,
             ) = self.encode_prompt(
                 prompt,
-                device,
+                torch.device("cpu"),
                 num_videos_per_prompt,
                 self.do_classifier_free_guidance,
                 negative_prompt,
@@ -901,7 +944,6 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                 prompt_embeds_2 = torch.cat([negative_prompt_embeds_2, prompt_embeds_2])
             if prompt_mask_2 is not None:
                 prompt_mask_2 = torch.cat([negative_prompt_mask_2, prompt_mask_2])
-
 
         # 4. Prepare timesteps
         extra_set_timesteps_kwargs = self.prepare_extra_func_kwargs(
@@ -956,6 +998,46 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         self._num_timesteps = len(timesteps)
 
+        # move all to device
+
+        latents = latents.to(device)
+        xs.mark_sharding(
+            latents,
+            xs.get_global_mesh(),
+            _prepare_spmd_partition_spec(latents, shard_maximal=True),
+        )
+        prompt_embeds = prompt_embeds.to(device)
+        xs.mark_sharding(
+            prompt_embeds,
+            xs.get_global_mesh(),
+            _prepare_spmd_partition_spec(prompt_embeds, shard_maximal=True),
+        )
+        prompt_mask = prompt_mask.to(device)
+        xs.mark_sharding(
+            prompt_mask,
+            xs.get_global_mesh(),
+            _prepare_spmd_partition_spec(prompt_mask, shard_maximal=True),
+        )
+        prompt_embeds_2 = prompt_embeds_2.to(device)
+        xs.mark_sharding(
+            prompt_embeds_2,
+            xs.get_global_mesh(),
+            _prepare_spmd_partition_spec(prompt_embeds_2, shard_maximal=True),
+        )
+        freqs_cis = [freq.to(device) for freq in freqs_cis]
+        for freq in freqs_cis:
+            xs.mark_sharding(
+                freq,
+                xs.get_global_mesh(),
+                _prepare_spmd_partition_spec(freq, shard_maximal=True),
+            )
+        print(f"Sharding {latents.shape} device: {latents.device}")
+        print(f"Sharding {prompt_embeds.shape} device: {prompt_embeds.device}")
+        print(f"Sharding {prompt_mask.shape} device: {prompt_mask.device}")
+        print(f"Sharding {prompt_embeds_2.shape} device: {prompt_embeds_2.device}")
+
+        sampling_start = time.time()
+
         # if is_progress_bar:
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
@@ -972,7 +1054,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                     latent_model_input, t
                 )
 
-                t_expand = t.repeat(latent_model_input.shape[0])
+                t_expand = t.repeat(latent_model_input.shape[0]).to(device)
                 guidance_expand = (
                     torch.tensor(
                         [embedded_guidance_scale] * latent_model_input.shape[0],
@@ -986,7 +1068,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
 
                 # predict the noise residual
                 with torch.autocast(
-                    device_type="cuda", dtype=target_dtype, enabled=autocast_enabled
+                    "xla", dtype=target_dtype, enabled=autocast_enabled
                 ):
                     noise_pred = self.transformer(  # For an input image (129, 192, 336) (1, 256, 256)
                         latent_model_input,  # [2, 16, 33, 24, 42]
@@ -1039,10 +1121,24 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                     (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
                 ):
                     if progress_bar is not None:
+                        print(f"Step {i + 1}/{len(timesteps)}")
+                        xla.sync()
                         progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
                         step_idx = i // getattr(self.scheduler, "order", 1)
                         callback(step_idx, t, latents)
+
+        print(f"Sampling time: {time.time() - sampling_start}")
+
+        cpu_transfer_start = time.time()
+
+        self.vae = self.vae.to(torch.device("cpu"))
+        latents = latents.to(torch.device("cpu"), dtype=torch.bfloat16)
+        print(f"Device: {device}")
+        print(f"vae.device: {self.vae.device} dtype: {self.vae.dtype}")
+        print(f"latents.device: {latents.device} dtype: {latents.dtype}")
+
+        print(f"CPU transfer time: {time.time() - cpu_transfer_start}")
 
         if not output_type == "latent":
             expand_temporal_dim = False
@@ -1068,9 +1164,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             else:
                 latents = latents / self.vae.config.scaling_factor
 
-            with torch.autocast(
-                device_type="cuda", dtype=vae_dtype, enabled=vae_autocast_enabled
-            ):
+            with torch.autocast("xla", dtype=vae_dtype, enabled=vae_autocast_enabled):
                 if enable_tiling:
                     self.vae.enable_tiling()
                     image = self.vae.decode(

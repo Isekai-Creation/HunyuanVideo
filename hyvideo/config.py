@@ -67,7 +67,7 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
     group.add_argument(
         "--vae-precision",
         type=str,
-        default="fp16",
+        default="bf16",
         choices=PRECISIONS,
         help="Precision mode for the VAE model.",
     )
@@ -88,7 +88,7 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
     group.add_argument(
         "--text-encoder-precision",
         type=str,
-        default="fp16",
+        default="bf16",
         choices=PRECISIONS,
         help="Precision mode for the text encoder model.",
     )
@@ -145,7 +145,7 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
     group.add_argument(
         "--text-encoder-precision-2",
         type=str,
-        default="fp16",
+        default="bf16",
         choices=PRECISIONS,
         help="Precision mode for the second text encoder model.",
     )
@@ -223,13 +223,13 @@ def add_inference_args(parser: argparse.ArgumentParser):
     group.add_argument(
         "--model-base",
         type=str,
-        default="ckpts",
+        default="/dev/shm/ckpts",
         help="Root path of all the models, including t2v models and extra models.",
     )
     group.add_argument(
         "--dit-weight",
         type=str,
-        default="ckpts/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt",
+        default="/dev/shm/ckpts/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt",
         help="Path to the HunyuanVideo model. If None, search the model in the args.model_root."
         "1. If it is a file, load the model directly."
         "2. If it is a directory, search the model in the directory. Support two types of models: "
